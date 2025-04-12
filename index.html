@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Asistencia Personal</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --export-color: #9b59b6;
+            --import-color: #1abc9c;
+            --pause-color: #e67e22;
+            --bg-color: #f5f7fa;
+            --text-color: #333;
+            --card-bg: white;
+            --border-color: #ddd;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #3498db;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --dark-color: #ecf0f1;
+            --light-color: #34495e;
+            --export-color: #9b59b6;
+            --import-color: #1abc9c;
+            --pause-color: #e67e22;
+            --bg-color: #121212;
+            --text-color: #f5f5f5;
+            --card-bg: #1e1e1e;
+            --border-color: #444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        h1, h2, h3 {
+            color: var(--dark-color);
+        }
+
+        .info {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        #fechaActual {
+            font-size: 1.1rem;
+            color: var(--dark-color);
+            font-weight: 500;
+        }
+
+        #horaActual {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin: 5px 0;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            70% { transform: scale(1.1); opacity: 0; }
+            100% { transform: scale(0.95); opacity: 0; }
+        }
+
+        .btn-entrada {
+            background-color: var(--success-color);
+        }
+
+        .btn-salida {
+            background-color: var(--danger-color);
+        }
+
+        .btn-pausa {
+            background-color: var(--pause-color);
+        }
+
+        .btn-limpiar {
+            background-color: var(--warning-color);
+            width: 80px;
+            height: 80px;
+            font-size: 0.9rem;
+        }
+
+        .btn-exportar {
+            background-color: var(--export-color);
+            width: 80px;
+            height: 80px;
+            font-size: 0.9rem;
+        }
+
+        .btn-importar {
+            background-color: var(--import-color);
+            width: 80px;
+            height: 80px;
+            font-size: 0.9rem;
+        }
+
+        .btn-auth {
+            background-color: var(--primary-color);
+            width: 80px;
+            height: 80px;
+            font-size: 0.9rem;
+        }
+
+        .btn-theme {
+            background-color: var(--dark-color);
+            width: 60px;
+            height: 60px;
+            font-size: 0.8rem;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .btn-icon {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .registros {
+            margin-top: 40px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--light-color);
+            color: var(--dark-color);
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .horas-totales {
+            display: flex;
+            justify-content: space-around;
+            background-color: var(--light-color);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+
+        .total-box {
+            text-align: center;
+        }
+
+        .total-label {
+            font-size: 0.9rem;
+            color: var(--text-color);
+            opacity: 0.7;
+            margin-bottom: 5px;
+        }
+
+        .total-value {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .no-records {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-color);
+            opacity: 0.5;
+            font-style: italic;
+        }
+
+        .charts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .charts canvas {
+            background-color: var(--card-bg);
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            flex: 1;
+            min-width: 300px;
+            max-height: 300px;
+        }
+
+        .auth-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .auth-box {
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+
+        .auth-title {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .auth-form input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: var(--card-bg);
+            color: var(--text-color);
+        }
+
+        .auth-form button {
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .auth-toggle {
+            text-align: center;
+            margin-top: 15px;
+            color: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .user-info {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: var(--light-color);
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .user-avatar {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .location-info {
+            font-size: 0.8rem;
+            color: var(--text-color);
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .pausa-active {
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
+        @media (max-width: 600px) {
+            .buttons {
+                gap: 15px;
+            }
+            
+            .btn {
+                width: 80px;
+                height: 80px;
+                font-size: 0.9rem;
+            }
+            
+            .btn-icon {
+                font-size: 1.5rem;
+            }
+            
+            .btn-limpiar, .btn-exportar, .btn-importar, .btn-auth {
+                width: 70px;
+                height: 70px;
+                font-size: 0.8rem;
+            }
+            
+            th, td {
+                padding: 8px 10px;
+                font-size: 0.9rem;
+            }
+            
+            .charts {
+                flex-direction: column;
+            }
+            
+            .charts canvas {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="userInfo" class="user-info" style="display: none;">
+            <div class="user-avatar" id="userAvatar"></div>
+            <span id="userEmail"></span>
+        </div>
+
+        <h1>Sistema de Asistencia Personal</h1>
+        <div class="info">
+            <p id="fechaActual"></p>
+            <p id="horaActual"></p>
+            <p class="location-info" id="locationInfo">Obteniendo ubicación...</p>
+        </div>
+        
+        <div class="buttons">
+            <button class="btn btn-entrada" id="entradaBtn">
+                <span class="btn-icon"><i class="fas fa-sign-in-alt"></i></span>
+                Entrada
+            </button>
+            <button class="btn btn-pausa" id="pausaBtn">
+                <span class="btn-icon"><i class="fas fa-pause"></i></span>
+                Pausa
+            </button>
+            <button class="btn btn-salida" id="salidaBtn">
+                <span class="btn-icon"><i class="fas fa-sign-out-alt"></i></span>
+                Salida
+            </button>
+            <button class="btn btn-limpiar" id="limpiarBtn">
+                <span class="btn-icon"><i class="fas fa-trash-alt"></i></span>
+                Limpiar
+            </button>
+            <button class="btn btn-exportar" id="exportarBtn">
+                <span class="btn-icon"><i class="fas fa-file-export"></i></span>
+                Exportar
+            </button>
+            <button class="btn btn-importar" id="importarBtn">
+                <span class="btn-icon"><i class="fas fa-file-import"></i></span>
+                Importar
+            </button>
+            <button class="btn btn-auth" id="authBtn">
+                <span class="btn-icon"><i class="fas fa-user"></i></span>
+                Iniciar Sesión
+            </button>
+        </div>
+
+        <button class="btn btn-theme" id="themeBtn">
+            <span class="btn-icon"><i class="fas fa-moon"></i></span>
+            Tema
+        </button>
+        
+        <div class="registros">
+            <h2>Historial de Asistencia</h2>
+            <table id="tablaRegistros">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Entrada</th>
+                        <th>Pausas</th>
+                        <th>Salida</th>
+                        <th>Horas Trabajadas</th>
+                    </tr>
+                </thead>
+                <tbody id="registrosBody">
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="horas-totales">
+            <div class="total-box">
+                <div class="total-label">Horas hoy</div>
+                <div class="total-value" id="horasHoy">0:00</div>
+            </div>
+            <div class="total-box">
+                <div class="total-label">Horas esta semana</div>
+                <div class="total-value" id="horasSemana">0:00</div>
+            </div>
+            <div class="total-box">
+                <div class="total-label">Horas este mes</div>
+                <div class="total-value" id="horasMes">0:00</div>
+            </div>
+        </div>
+        
+        <div class="registros">
+            <h2>Estadísticas</h2>
+            <div class="charts">
+                <canvas id="horasSemanaChart"></canvas>
+                <canvas id="horasMesChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="auth-container" id="authContainer">
+        <div class="auth-box">
+            <h2 class="auth-title" id="authTitle">Iniciar Sesión</h2>
+            <form class="auth-form" id="authForm">
+                <input type="email" id="authEmail" placeholder="Correo electrónico" required>
+                <input type="password" id="authPassword" placeholder="Contraseña" required>
+                <button type="submit" id="authSubmit">Iniciar Sesión</button>
+                <div class="auth-toggle" id="authToggle">¿No tienes cuenta? Regístrate</div>
+                <div class="auth-toggle" id="authCancel">Cancelar</div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Configuración de Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyD4XG3l4JX4X4X4X4X4X4X4X4X4X4X4X4X",
+            authDomain: "asistencia-personal.firebaseapp.com",
+            databaseURL: "https://asistencia-personal-default-rtdb.firebaseio.com",
+            projectId: "asistencia-personal",
+            storageBucket: "asistencia-personal.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:4X4X4X4X4X4X4X4X4X4X4X"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        // Variables de estado
+        let currentUser = null;
+        let currentLocation = null;
+        let isPausaActive = false;
+        let pausaInicio = null;
+        let pausasHoy = [];
+        let isLoginMode = true;
+
+        // Elementos del DOM
+        const entradaBtn = document.getElementById('entradaBtn');
+        const salidaBtn = document.getElementById('salidaBtn');
+        const pausaBtn = document.getElementById('pausaBtn');
+        const limpiarBtn = document.getElementById('limpiarBtn');
+        const exportarBtn = document.getElementById('exportarBtn');
+        const importarBtn = document.getElementById('importarBtn');
+        const authBtn = document.getElementById('authBtn');
+        const themeBtn = document.getElementById('themeBtn');
+        const registrosBody = document.getElementById('registrosBody');
+        const fechaActual = document.getElementById('fechaActual');
+        const horaActual = document.getElementById('horaActual');
+        const locationInfo = document.getElementById('locationInfo');
+        const horasHoy = document.getElementById('horasHoy');
+        const horasSemana = document.getElementById('horasSemana');
+        const horasMes = document.getElementById('horasMes');
+        const userInfo = document.getElementById('userInfo');
+        const userAvatar = document.getElementById('userAvatar');
+        const userEmail = document.getElementById('userEmail');
+        const authContainer = document.getElementById('authContainer');
+        const authTitle = document.getElementById('authTitle');
+        const authForm = document.getElementById('authForm');
+        const authEmail = document.getElementById('authEmail');
+        const authPassword = document.getElementById('authPassword');
+        const authSubmit = document.getElementById('authSubmit');
+        const authToggle = document.getElementById('authToggle');
+        const authCancel = document.getElementById('authCancel');
+
+        // Inicializar tema
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            themeBtn.innerHTML = `<span class="btn-icon"><i class="fas ${savedTheme === 'dark' ? 'fa-sun' : 'fa-moon'}"></i></span> Tema`;
+        }
+
+        // Alternar tema
+        themeBtn.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            themeBtn.innerHTML = `<span class="btn-icon"><i class="fas ${newTheme === 'dark' ? 'fa-sun' : 'fa-moon'}"></i></span> Tema`;
+        });
+
+        // Actualizar fecha y hora en tiempo real
+        function actualizarReloj() {
+            const ahora = new Date();
+            const opcionesFecha = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            fechaActual.textContent = ahora.toLocaleDateString('es-ES', opcionesFecha);
+            horaActual.textContent = ahora.toLocaleTimeString('es-ES');
+        }
+        setInterval(actualizarReloj, 1000);
+        actualizarReloj();
+
+        // Obtener ubicación
+        function obtenerUbicacion() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    position => {
+                        currentLocation = {
+                            lat: position.coords.latitude,
+                            lng: position.coords.longitude,
+                            accuracy: position.coords.accuracy
+                        };
+                        // Obtener dirección aproximada
+                        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLocation.lat}&lon=${currentLocation.lng}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                const address = data.address;
+                                let locationText = '';
+                                if (address.road) locationText += address.road;
+                                if (address.city) locationText += address.city ? `, ${address.city}` : '';
+                                if (address.country) locationText += address.country ? `, ${address.country}` : '';
+                                locationInfo.textContent = locationText || 'Ubicación obtenida';
+                            })
+                            .catch(() => {
+                                locationInfo.textContent = `Lat: ${currentLocation.lat.toFixed(4)}, Lng: ${currentLocation.lng.toFixed(4)}`;
+                            });
+                    },
+                    error => {
+                        console.error("Error obteniendo ubicación:", error);
+                        locationInfo.textContent = "Ubicación no disponible";
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            } else {
+                locationInfo.textContent = "Geolocalización no soportada";
+            }
+        }
+
+        // Formatear fecha como YYYY-MM-DD
+        function formatearFecha(date) {
+            const d = new Date(date);
+            let month = '' + (d.getMonth() + 1);
+            let day = '' + d.getDate();
+            const year = d.getFullYear();
+
+            if (month.length < 2) month = '0' + month;
+            if (day.length < 2) day = '0' + day;
+
+            return [year, month, day].join('-');
+        }
+
+        // Calcular horas trabajadas (ajustado desde las 6:00 am)
+        function calcularHoras(entrada, salida, pausas = []) {
+            if (!entrada || !salida) return "0:00";
+            
+            const entradaDate = new Date(entrada);
+            const salidaDate = new Date(salida);
+            
+            // Ajustar a partir de las 6:00 am
+            const horaBase = 6;
+            if (entradaDate.getHours() < horaBase) {
+                entradaDate.setHours(horaBase, 0, 0, 0);
+            }
+            
+            let diffMs = salidaDate - entradaDate;
+            
+            // Restar tiempo de pausas
+            pausas.forEach(pausa => {
+                if (pausa.inicio && pausa.fin) {
+                    const inicioPausa = new Date(pausa.inicio);
+                    const finPausa = new Date(pausa.fin);
+                    diffMs -= (finPausa - inicioPausa);
+                }
+            });
+            
+            if (diffMs < 0) return "0:00";
+            
+            const diffHrs = Math.floor((diffMs % 86400000) / 3600000);
+            const diffMins = Math.round(((diffMs % 86400000) % 3600000) / 60000);
+            
+            return `${diffHrs}:${diffMins < 10 ? '0' : ''}${diffMins}`;
+        }
+
+        // Convertir HH:MM a horas decimales
+        function horasADecimal(horasStr) {
+            const [h, m] = horasStr.split(':').map(Number);
+            return h + (m / 60);
+        }
+
+        // Convertir horas decimales a HH:MM
+        function decimalAHoras(decimal) {
+            const horas = Math.floor(decimal);
+            const minutos = Math.round((decimal - horas) * 60);
+            return `${horas}:${minutos < 10 ? '0' : ''}${minutos}`;
+        }
+
+        // Cargar registros desde Firebase
+        function cargarRegistros() {
+            if (!currentUser) return;
+            
+            const userId = currentUser.uid;
+            database.ref(`asistencia/${userId}`).once('value')
+                .then(snapshot => {
+                    const registros = [];
+                    snapshot.forEach(childSnapshot => {
+                        registros.push(childSnapshot.val());
+                    });
+                    
+                    registrosBody.innerHTML = '';
+                    
+                    if (registros.length === 0) {
+                        registrosBody.innerHTML = '<tr><td colspan="5" class="no-records">No hay registros de asistencia</td></tr>';
+                        horasHoy.textContent = '0:00';
+                        horasSemana.textContent = '0:00';
+                        horasMes.textContent = '0:00';
+                        return;
+                    }
+                    
+                    let totalHoy = 0;
+                    let totalSemana = 0;
+                    let totalMes = 0;
+                    const hoy = new Date();
+                    const fechaHoy = formatearFecha(hoy);
+                    const semanaPasada = new Date(hoy.getTime() - 7 * 24 * 60 * 60 * 1000);
+                    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+                    
+                    registros.sort((a, b) => new Date(b.entrada) - new Date(a.entrada));
+                    
+                    registros.forEach(registro => {
+                        const fila = document.createElement('tr');
+                        const fechaRegistro = formatearFecha(new Date(registro.entrada));
+                        const horas = calcularHoras(registro.entrada, registro.salida, registro.pausas || []);
+                        
+                        // Formatear pausas
+                        let pausasText = '-';
+                        if (registro.pausas && registro.pausas.length > 0) {
+                            pausasText = registro.pausas.map(p => {
+                                const inicio = p.inicio ? new Date(p.inicio).toLocaleTimeString('es-ES', {timeStyle: 'short'}) : '-';
+                                const fin = p.fin ? new Date(p.fin).toLocaleTimeString('es-ES', {timeStyle: 'short'}) : '-';
+                                return `${inicio} - ${fin}`;
+                            }).join('<br>');
+                        }
+                        
+                        // Sumar horas a los totales
+                        const horasDecimal = horasADecimal(horas);
+                        
+                        if (fechaRegistro === fechaHoy && registro.salida) {
+                            totalHoy += horasDecimal;
+                        }
+                        
+                        const fechaRegistroObj = new Date(registro.entrada);
+                        if (fechaRegistroObj >= semanaPasada) {
+                            totalSemana += horasDecimal;
+                        }
+                        if (fechaRegistroObj >= primerDiaMes) {
+                            totalMes += horasDecimal;
+                        }
+                        
+                        fila.innerHTML = `
+                            <td>${new Date(registro.entrada).toLocaleDateString('es-ES')}</td>
+                            <td>${registro.entrada ? new Date(registro.entrada).toLocaleTimeString('es-ES') : '-'}</td>
+                            <td>${pausasText}</td>
+                            <td>${registro.salida ? new Date(registro.salida).toLocaleTimeString('es-ES') : '-'}</td>
+                            <td>${horas}</td>
+                        `;
+                        registrosBody.appendChild(fila);
+                    });
+                    
+                    horasHoy.textContent = decimalAHoras(totalHoy);
+                    horasSemana.textContent = decimalAHoras(totalSemana);
+                    horasMes.textContent = decimalAHoras(totalMes);
+                    
+                    generarGraficos(registros);
+                })
+                .catch(error => {
+                    console.error("Error cargando registros:", error);
+                    registrosBody.innerHTML = '<tr><td colspan="5" class="no-records">Error cargando registros</td></tr>';
+                });
+        }
+
+        // Generar gráficos estadísticos
+        function generarGraficos(registros) {
+            if (registros.length === 0) return;
+            
+            // Destruir gráficos existentes si los hay
+            if (window.semanaChart) window.semanaChart.destroy();
+            if (window.mesChart) window.mesChart.destroy();
+            
+            // Datos de la última semana
+            const hoy = new Date();
+            const ultimos7Dias = [...Array(7)].map((_, i) => {
+                const d = new Date(hoy);
+                d.setDate(d.getDate() - i);
+                return formatearFecha(d);
+            }).reverse();
+            
+            const horasPorDia = ultimos7Dias.map(fecha => {
+                const registrosDia = registros.filter(r => 
+                    formatearFecha(new Date(r.entrada)) === fecha && r.salida
+                );
+                
+                return registrosDia.reduce((total, r) => {
+                    return total + horasADecimal(calcularHoras(r.entrada, r.salida, r.pausas || []));
+                }, 0);
+            });
+            
+            // Gráfico semanal
+            const ctxSemana = document.getElementById('horasSemanaChart').getContext('2d');
+            window.semanaChart = new Chart(ctxSemana, {
+                type: 'bar',
+                data: {
+                    labels: ultimos7Dias.map(f => new Date(f).toLocaleDateString('es-ES', {weekday: 'short'})),
+                    datasets: [{
+                        label: 'Horas trabajadas',
+                        data: horasPorDia,
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Horas'
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Datos del último mes (por semana)
+            const semanasMes = [];
+            const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            let fechaActual = new Date(primerDiaMes);
+            
+            while (fechaActual <= hoy) {
+                const inicioSemana = new Date(fechaActual);
+                const finSemana = new Date(fechaActual);
+                finSemana.setDate(finSemana.getDate() + 6);
+                
+                if (finSemana > hoy) finSemana = new Date(hoy);
+                
+                semanasMes.push({
+                    inicio: new Date(inicioSemana),
+                    fin: new Date(finSemana),
+                    label: `Sem ${semanasMes.length + 1}`
+                });
+                
+                fechaActual.setDate(fechaActual.getDate() + 7);
+            }
+            
+            const horasPorSemana = semanasMes.map(semana => {
+                return registros.reduce((total, r) => {
+                    const fechaRegistro = new Date(r.entrada);
+                    if (fechaRegistro >= semana.inicio && fechaRegistro <= semana.fin && r.salida) {
+                        return total + horasADecimal(calcularHoras(r.entrada, r.salida, r.pausas || []));
+                    }
+                    return total;
+                }, 0);
+            });
+            
+            // Gráfico mensual
+            const ctxMes = document.getElementById('horasMesChart').getContext('2d');
+            window.mesChart = new Chart(ctxMes, {
+                type: 'line',
+                data: {
+                    labels: semanasMes.map(s => s.label),
+                    datasets: [{
+                        label: 'Horas por semana',
+                        data: horasPorSemana,
+                        backgroundColor: 'rgba(46, 204, 113, 0.2)',
+                        borderColor: 'rgba(46, 204, 113, 1)',
+                        borderWidth: 2,
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Horas'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Registrar entrada
+        entradaBtn.addEventListener('click', () => {
+            if (!currentUser) {
+                alert('Debes iniciar sesión para registrar asistencia');
+                return;
+            }
+            
+            const ahora = new Date();
+            const fechaHoy = formatearFecha(ahora);
+            const userId = currentUser.uid;
+            
+            // Verificar si ya hay una entrada hoy sin salida
+            database.ref(`asistencia/${userId}`).orderByChild('entrada').startAt(`${fechaHoy}T00:00:00`).endAt(`${fechaHoy}T23:59:59`).once('value')
+                .then(snapshot => {
+                    let tieneRegistroPendiente = false;
+                    snapshot.forEach(childSnapshot => {
+                        const registro = childSnapshot.val();
+                        if (!registro.salida) {
+                            tieneRegistroPendiente = true;
+                        }
+                    });
+                    
+                    if (tieneRegistroPendiente) {
+                        alert('Ya registraste tu entrada hoy y no has registrado salida.');
+                        return;
+                    }
+                    
+                    // Crear nuevo registro
+                    const nuevoRegistro = {
+                        entrada: ahora.toISOString(),
+                        salida: null,
+                        pausas: [],
+                        ubicacionEntrada: currentLocation
+                    };
+                    
+                    const nuevoRegistroRef = database.ref(`asistencia/${userId}`).push();
+                    nuevoRegistroRef.set(nuevoRegistro)
+                        .then(() => {
+                            // Efecto visual
+                            entradaBtn.classList.add('active');
+                            setTimeout(() => entradaBtn.classList.remove('active'), 300);
+                            
+                            alert('✅ Entrada registrada a las ' + ahora.toLocaleTimeString('es-ES'));
+                            cargarRegistros();
+                        })
+                        .catch(error => {
+                            console.error("Error registrando entrada:", error);
+                            alert('Error registrando entrada');
+                        });
+                })
+                .catch(error => {
+                    console.error("Error verificando registros:", error);
+                    alert('Error verificando registros existentes');
+                });
+        });
+
+        // Registrar pausa
+        pausaBtn.addEventListener('click', () => {
+            if (!currentUser) {
+                alert('Debes iniciar sesión para registrar pausas');
+                return;
+            }
+            
+            const ahora = new Date();
+            const fechaHoy = formatearFecha(ahora);
+            const userId = currentUser.uid;
+            
+            if (!isPausaActive) {
+                // Iniciar pausa
+                database.ref(`asistencia/${userId}`).orderByChild('entrada').startAt(`${fechaHoy}T00:00:00`).endAt(`${fechaHoy}T23:59:59`).once('value')
+                    .then(snapshot => {
+                        let registroHoy = null;
+                        let registroKey = null;
+                        
+                        snapshot.forEach(childSnapshot => {
+                            const registro = childSnapshot.val();
+                            if (!registro.salida) {
+                                registroHoy = registro;
+                                registroKey = childSnapshot.key;
+                            }
+                        });
+                        
+                        if (!registroHoy) {
+                            alert('No hay una entrada registrada hoy para iniciar pausa.');
+                            return;
+                        }
+                        
+                        // Iniciar pausa
+                        isPausaActive = true;
+                        pausaInicio = ahora.toISOString();
+                        pausaBtn.classList.add('pausa-active');
+                        pausaBtn.innerHTML = '<span class="btn-icon"><i class="fas fa-play"></i></span> Reanudar';
+                        
+                        // Agregar pausa al registro
+                        if (!registroHoy.pausas) registroHoy.pausas = [];
+                        registroHoy.pausas.push({
+                            inicio: pausaInicio,
+                            fin: null
+                        });
+                        
+                        database.ref(`asistencia/${userId}/${registroKey}`).update({
+                            pausas: registroHoy.pausas
+                        })
+                        .then(() => {
+                            alert('⏸ Pausa iniciada a las ' + ahora.toLocaleTimeString('es-ES'));
+                        })
+                        .catch(error => {
+                            console.error("Error registrando pausa:", error);
+                            alert('Error registrando pausa');
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Error verificando registros:", error);
+                        alert('Error verificando registros existentes');
+                    });
+            } else {
+                // Finalizar pausa
+                isPausaActive = false;
+                pausaBtn.classList.remove('pausa-active');
+                pausaBtn.innerHTML = '<span class="btn-icon"><i class="fas fa-pause"></i></span> Pausa';
+                
+                const pausaFin = ahora.toISOString();
+                
+                database.ref(`asistencia/${userId}`).orderByChild('entrada').startAt(`${fechaHoy}T00:00:00`).endAt(`${fechaHoy}T23:59:59`).once('value')
+                    .then(snapshot => {
+                        let registroHoy = null;
+                        let registroKey = null;
+                        
+                        snapshot.forEach(childSnapshot => {
+                            const registro = childSnapshot.val();
+                            if (!registro.salida) {
+                                registroHoy = registro;
+                                registroKey = childSnapshot.key;
+                            }
+                        });
+                        
+                        if (!registroHoy) {
+                            alert('No hay un registro activo hoy para finalizar pausa.');
+                            return;
+                        }
+                        
+                        // Encontrar la pausa sin finalizar
+                        const pausaActiva = registroHoy.pausas?.find(p => p.inicio && !p.fin);
+                        if (!pausaActiva) {
+                            alert('No hay pausa activa para finalizar.');
+                            return;
+                        }
+                        
+                        pausaActiva.fin = pausaFin;
+                        
+                        database.ref(`asistencia/${userId}/${registroKey}`).update({
+                            pausas: registroHoy.pausas
+                        })
+                        .then(() => {
+                            alert('▶ Reanudado a las ' + ahora.toLocaleTimeString('es-ES'));
+                            cargarRegistros();
+                        })
+                        .catch(error => {
+                            console.error("Error finalizando pausa:", error);
+                            alert('Error finalizando pausa');
+                        });
+                    })
+                    .catch(error => {
+                        console.error("Error verificando registros:", error);
+                        alert('Error verificando registros existentes');
+                    });
+            }
+        });
+
+        // Registrar salida
+        salidaBtn.addEventListener('click', () => {
+            if (!currentUser) {
+                alert('Debes iniciar sesión para registrar salida');
+                return;
+            }
+            
+            const ahora = new Date();
+            const fechaHoy = formatearFecha(ahora);
+            const userId = currentUser.uid;
+            
+            database.ref(`asistencia/${userId}`).orderByChild('entrada').startAt(`${fechaHoy}T00:00:00`).endAt(`${fechaHoy}T23:59:59`).once('value')
+                .then(snapshot => {
+                    let registroHoy = null;
+                    let registroKey = null;
+                    
+                    snapshot.forEach(childSnapshot => {
+                        const registro = childSnapshot.val();
+                        if (!registro.salida) {
+                            registroHoy = registro;
+                            registroKey = childSnapshot.key;
+                        }
+                    });
+                    
+                    if (!registroHoy) {
+                        alert('⚠️ No hay una entrada registrada hoy para poner la salida.');
+                        return;
+                    }
+                    
+                    // Verificar si hay pausa activa
+                    const pausaActiva = registroHoy.pausas?.find(p => p.inicio && !p.fin);
+                    if (pausaActiva) {
+                        if (confirm('Tienes una pausa activa. ¿Deseas finalizarla y registrar salida?')) {
+                            pausaActiva.fin = ahora.toISOString();
+                        } else {
+                            return;
+                        }
+                    }
+                    
+                    // Actualizar el registro con la salida
+                    registroHoy.salida = ahora.toISOString();
+                    registroHoy.ubicacionSalida = currentLocation;
+                    
+                    database.ref(`asistencia/${userId}/${registroKey}`).update(registroHoy)
+                        .then(() => {
+                            // Efecto visual
+                            salidaBtn.classList.add('active');
+                            setTimeout(() => salidaBtn.classList.remove('active'), 300);
+                            
+                            const horas = calcularHoras(registroHoy.entrada, registroHoy.salida, registroHoy.pausas || []);
+                            alert(`✅ Salida registrada a las ${ahora.toLocaleTimeString('es-ES')}\nHoras trabajadas hoy: ${horas}`);
+                            cargarRegistros();
+                        })
+                        .catch(error => {
+                            console.error("Error registrando salida:", error);
+                            alert('Error registrando salida');
+                        });
+                })
+                .catch(error => {
+                    console.error("Error verificando registros:", error);
+                    alert('Error verificando registros existentes');
+                });
+        });
+
+        // Limpiar todos los registros (con confirmación)
+        limpiarBtn.addEventListener('click', () => {
+            if (!currentUser) {
+                alert('Debes iniciar sesión para limpiar registros');
+                return;
+            }
+            
+            if (confirm('¿Estás seguro de que quieres borrar TODOS tus registros de asistencia?\nEsta acción no se puede deshacer.')) {
+                const userId = currentUser.uid;
+                database.ref(`asistencia/${userId}`).remove()
+                    .then(() => {
+                        // Efecto visual
+                        limpiarBtn.classList.add('active');
+                        setTimeout(() => limpiarBtn.classList.remove('active'), 300);
+                        
+                        alert('Todos tus registros han sido eliminados.');
+                        cargarRegistros();
+                    })
+                    .catch(error => {
+                        console.error("Error eliminando registros:", error);
+                        alert('Error eliminando registros');
+                    });
+            }
+        });
+
+        // Exportar registros a archivo JSON
+        exportarBtn.addEventListener('click', () => {
+            if (!currentUser) {
+                alert('Debes iniciar sesión para exportar registros');
+                return;
+            }
+            
+            const userId = currentUser.uid;
+            database.ref(`asistencia/${userId}`).once('value')
+                .then(snapshot => {
+                    const registros = [];
+                    snapshot.forEach(childSnapshot => {
+                        registros.push(childSnapshot.val());
+                    });
+                    
+                    const dataStr = JSON.stringify(registros, null, 2);
+                    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                    
+                    const exportFileDefaultName = `asistencia-${formatearFecha(new Date())}-${currentUser.email.split('@')[0]}.json`;
+                    
+                    const linkElement = document.createElement('a');
+                    linkElement.setAttribute('href', dataUri);
+                    linkElement.setAttribute('download', exportFileDefaultName);
+                    linkElement.click();
+                })
+                .catch(error => {
+                    console.error("Error exportando registros:", error);
+                    alert('Error exportando registros');
+                });
+        });
+
+        // Importar registros desde archivo JSON
+        importarBtn.addEventListener('click', () => {
+            if (!currentUser) {
+                alert('Debes iniciar sesión para importar registros');
+                return;
+            }
+            
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = e => {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = event => {
+                    try {
+                        const registros = JSON.parse(event.target.result);
+                        if (Array.isArray(registros)) {
+                            if (confirm(`¿Importar ${registros.length} registros? Se fusionarán con tus registros existentes.`)) {
+                                const userId = currentUser.uid;
+                                const updates = {};
+                                
+                                registros.forEach(registro => {
+                                    const newKey = database.ref(`asistencia/${userId}`).push().key;
+                                    updates[newKey] = registro;
+                                });
+                                
+                                database.ref(`asistencia/${userId}`).update(updates)
+                                    .then(() => {
+                                        alert(`Importación exitosa. Se agregaron ${registros.length} registros.`);
+                                        cargarRegistros();
+                                    })
+                                    .catch(error => {
+                                        console.error("Error importando registros:", error);
+                                        alert('Error importando registros');
+                                    });
+                            }
+                        } else {
+                            alert('El archivo no contiene datos válidos.');
+                        }
+                    } catch (error) {
+                        alert('Error al leer el archivo: ' + error.message);
+                    }
+                };
+                
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        });
+
+        // Autenticación
+        function toggleAuthModal() {
+            authContainer.style.display = authContainer.style.display === 'flex' ? 'none' : 'flex';
+        }
+
+        function toggleAuthMode() {
+            isLoginMode = !isLoginMode;
+            authTitle.textContent = isLoginMode ? 'Iniciar Sesión' : 'Registrarse';
+            authSubmit.textContent = isLoginMode ? 'Iniciar Sesión' : 'Registrarse';
+            authToggle.textContent = isLoginMode ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Inicia Sesión';
+        }
+
+        function handleAuthSubmit(e) {
+            e.preventDefault();
+            const email = authEmail.value;
+            const password = authPassword.value;
+            
+            if (isLoginMode) {
+                // Iniciar sesión
+                auth.signInWithEmailAndPassword(email, password)
+                    .then(userCredential => {
+                        currentUser = userCredential.user;
+                        updateUIForAuth();
+                        toggleAuthModal();
+                        cargarRegistros();
+                    })
+                    .catch(error => {
+                        alert('Error iniciando sesión: ' + error.message);
+                    });
+            } else {
+                // Registrarse
+                auth.createUserWithEmailAndPassword(email, password)
+                    .then(userCredential => {
+                        currentUser = userCredential.user;
+                        updateUIForAuth();
+                        toggleAuthModal();
+                    })
+                    .catch(error => {
+                        alert('Error registrando usuario: ' + error.message);
+                    });
+            }
+        }
+
+        function updateUIForAuth() {
+            if (currentUser) {
+                userInfo.style.display = 'flex';
+                userAvatar.textContent = currentUser.email.charAt(0).toUpperCase();
+                userEmail.textContent = currentUser.email;
+                authBtn.innerHTML = '<span class="btn-icon"><i class="fas fa-sign-out-alt"></i></span> Salir';
+            } else {
+                userInfo.style.display = 'none';
+                authBtn.innerHTML = '<span class="btn-icon"><i class="fas fa-user"></i></span> Iniciar Sesión';
+            }
+        }
+
+        function signOut() {
+            auth.signOut()
+                .then(() => {
+                    currentUser = null;
+                    updateUIForAuth();
+                    registrosBody.innerHTML = '<tr><td colspan="5" class="no-records">Inicia sesión para ver tus registros</td></tr>';
+                    horasHoy.textContent = '0:00';
+                    horasSemana.textContent = '0:00';
+                    horasMes.textContent = '0:00';
+                })
+                .catch(error => {
+                    console.error("Error cerrando sesión:", error);
+                });
+        }
+
+        // Event listeners para autenticación
+        authBtn.addEventListener('click', () => {
+            if (currentUser) {
+                signOut();
+            } else {
+                toggleAuthModal();
+            }
+        });
+
+        authForm.addEventListener('submit', handleAuthSubmit);
+        authToggle.addEventListener('click', toggleAuthMode);
+        authCancel.addEventListener('click', toggleAuthModal);
+
+        // Observador de estado de autenticación
+        auth.onAuthStateChanged(user => {
+            currentUser = user;
+            updateUIForAuth();
+            
+            if (user) {
+                cargarRegistros();
+                obtenerUbicacion();
+            }
+        });
+
+        // Inicializar
+        initTheme();
+        updateUIForAuth();
+    </script>
+</body>
+</html>
